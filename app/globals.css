@@ -545,6 +545,17 @@ body::after {
 
   .neon-response-box {
     padding: 20px 16px;
+    overflow-x: auto;
+  }
+
+  .markdown-content {
+    font-size: 0.88rem;
+  }
+
+  .markdown-content table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 
   .input-area {
