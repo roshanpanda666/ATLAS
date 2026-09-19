@@ -460,6 +460,106 @@ body::after {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
+
+/* ── Responsive Mobile Styles ── */
+
+/* Header / Nav */
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 20px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+}
+
+.top-nav-right {
+  display: flex;
+  gap: 10px;
+}
+
+/* Sidebar Drawer */
+.sidebar-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 320px;
+  background: rgba(8, 10, 9, 0.95);
+  border-right: 1px solid var(--neon-green-border);
+  z-index: 100;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0, 255, 136, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Auth Modal */
+.auth-modal-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px;
+  position: relative;
+  margin: 0 16px;
+}
+
+/* Input Area Container */
+.input-area {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .top-nav {
+    position: relative;
+    padding: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
+  
+  .top-nav-right {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  main {
+    padding: 16px 12px !important;
+  }
+
+  .neon-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .neon-response-box {
+    padding: 20px 16px;
+  }
+
+  .input-area {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .neon-btn {
+    width: 100%;
+  }
+
+  .sidebar-drawer {
+    width: 100%;
+  }
+
+  h1 {
+    font-size: 2.2rem !important;
+  }
+}
+

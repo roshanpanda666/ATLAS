@@ -91,6 +91,8 @@ export default function SettingsPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px',
         }}
       >
         <Link
@@ -148,7 +150,7 @@ export default function SettingsPage() {
           <label style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--neon-green)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             1. Groq API Key
           </label>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative', flex: 1 }}>
               <input
                 type={showApiKey ? "text" : "password"}

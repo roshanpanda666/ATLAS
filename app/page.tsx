@@ -294,71 +294,56 @@ export default function Home() {
         position: 'relative',
       }}
     >
-      {/* Top Left: Chat History Button */}
-      {token && (
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          className="prompt-chip"
-          style={{
-            position: 'fixed',
-            top: '20px',
-            left: '20px',
-            zIndex: 40,
-            padding: '8px 14px',
-            fontSize: '0.84rem',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-          View Chat History
-        </button>
-      )}
+      <header className="top-nav fade-in">
+        <div className="top-nav-left">
+          {token && (
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="prompt-chip"
+              style={{
+                padding: '8px 14px',
+                fontSize: '0.84rem',
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+              View Chat History
+            </button>
+          )}
+        </div>
 
-      {/* Top Right: Settings & Auth */}
-      <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          zIndex: 40,
-          display: 'flex',
-          gap: '10px'
-      }}>
-        {token ? (
-          <button onClick={handleLogout} className="prompt-chip" style={{ padding: '8px 14px', fontSize: '0.84rem' }}>
-            Logout ({username})
-          </button>
-        ) : (
-          <button onClick={() => setIsAuthModalOpen(true)} className="prompt-chip" style={{ padding: '8px 14px', fontSize: '0.84rem', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}>
-            Sign In / Register
-          </button>
-        )}
+        <div className="top-nav-right">
+          {token ? (
+            <button onClick={handleLogout} className="prompt-chip" style={{ padding: '8px 14px', fontSize: '0.84rem' }}>
+              Logout ({username})
+            </button>
+          ) : (
+            <button onClick={() => setIsAuthModalOpen(true)} className="prompt-chip" style={{ padding: '8px 14px', fontSize: '0.84rem', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}>
+              Sign In / Register
+            </button>
+          )}
 
-        <Link
-          href="/settings"
-          className="prompt-chip"
-          style={{
-            padding: '8px 14px',
-            fontSize: '0.84rem',
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-          title="Open System Settings & Configuration"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-          <span>Settings</span>
-        </Link>
-      </div>
+          <Link
+            href="/settings"
+            className="prompt-chip"
+            style={{
+              padding: '8px 14px',
+              fontSize: '0.84rem',
+              textDecoration: 'none',
+            }}
+            title="Open System Settings & Configuration"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            <span>Settings</span>
+          </Link>
+        </div>
+      </header>
 
       {/* Header section */}
       <div className="fade-in" style={{ textAlign: 'center', maxWidth: '680px' }}>
@@ -461,7 +446,7 @@ export default function Home() {
         </div>
 
         {/* Input & Action button */}
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="input-area">
           <input
             ref={nameholder}
             type="text"
@@ -679,12 +664,7 @@ export default function Home() {
 
       {/* Sidebar for Chat History */}
       {isSidebarOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, bottom: 0, width: '320px',
-          background: 'rgba(8, 10, 9, 0.95)', borderRight: '1px solid var(--neon-green-border)',
-          zIndex: 100, padding: '24px', display: 'flex', flexDirection: 'column',
-          boxShadow: '4px 0 24px rgba(0, 255, 136, 0.1)', backdropFilter: 'blur(12px)'
-        }}>
+        <div className="sidebar-drawer">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <h2 style={{ margin: 0, color: 'var(--neon-green)', fontSize: '1.2rem', fontWeight: 700 }}>Chat History</h2>
             <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
@@ -740,7 +720,7 @@ export default function Home() {
           background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
           zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
-          <div className="neon-card" style={{ width: '400px', padding: '32px', position: 'relative' }}>
+          <div className="neon-card auth-modal-card">
             <button onClick={() => setIsAuthModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
