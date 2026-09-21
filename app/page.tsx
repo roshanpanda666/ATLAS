@@ -2,6 +2,8 @@
 import test from "./actions/simpleaction"
 import { getDynamicSuggestions } from "./actions/getDynamicSuggestions"
 import { exportResponseToPdf } from "./actions/exportPdf"
+import { humanizeContent } from "./actions/humanize"
+import { checkAiContent, type AiCheckResult } from "./actions/checkAiContent"
 import { DEFAULT_SUGGESTIONS, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT, type Message, type Suggestion, type ChatSettings } from "./types/chat"
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
@@ -71,6 +73,27 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [chatSessions, setChatSessions] = useState<any[]>([])
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+
+  // Humanize State
+  const [isHumanizePanelOpen, setIsHumanizePanelOpen] = useState(false)
+  const [humanizedText, setHumanizedText] = useState('')
+  const [isHumanizing, setIsHumanizing] = useState(false)
+
+  // AI Content Check State
+  const [aiCheckResult, setAiCheckResult] = useState<AiCheckResult | null>(null)
+  const [isCheckingAi, setIsCheckingAi] = useState(false)
+  const [isAiCheckModalOpen, setIsAiCheckModalOpen] = useState(false)
+
+  // Terminal Execution Logs State
+  const [toolLogs, setToolLogs] = useState<Array<{ id: string; text: string; time: string }>>([])
+  const [isLogsExpanded, setIsLogsExpanded] = useState(true)
+  const terminalLogsEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (isLogsExpanded && terminalLogsEndRef.current) {
+      terminalLogsEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [toolLogs, isLogsExpanded])
 
   const nameholder = useRef<HTMLInputElement>(null)
   const chatHistory = useRef<Message[]>([])
@@ -188,6 +211,8 @@ export default function Home() {
         setData(lastMsg?.content || '')
         setActivePrompt(lastUserMsg?.content || 'Loaded chat')
         setIsSidebarOpen(false)
+        setToolLogs([])
+        setToolStatus(null)
       }
     } catch (e) {
       console.error(e)
@@ -201,6 +226,8 @@ export default function Home() {
     setActivePrompt(null)
     setIsSidebarOpen(false)
     setPdfData(null)
+    setToolLogs([])
+    setToolStatus(null)
     if (nameholder.current) nameholder.current.value = ""
   }
 
@@ -242,6 +269,7 @@ export default function Home() {
     setData('')
     setIsLoading(true)
     setToolStatus(null)
+    setToolLogs([])
 
     let fullResponse = ''
     let generatedPdfUrl: string | null = null
@@ -249,7 +277,17 @@ export default function Home() {
     try {
       const stream = await test(recentMessages, customSettings)
       for await (const chunk of stream) {
-        if (chunk.startsWith('__TOOL__:')) {
+        if (chunk.startsWith('__LOG__:')) {
+          const logText = chunk.slice('__LOG__:'.length)
+          setToolLogs((prev) => [
+            ...prev,
+            {
+              id: Math.random().toString(36).substring(2, 9),
+              text: logText,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            },
+          ])
+        } else if (chunk.startsWith('__TOOL__:')) {
           setToolStatus(chunk.slice('__TOOL__:'.length))
         } else if (chunk.startsWith('__PDF__:')) {
           const raw = chunk.slice('__PDF__:'.length)
@@ -338,6 +376,57 @@ export default function Home() {
     }
   }
 
+  const handleHumanize = async () => {
+    if (!data || isHumanizing) return
+    setIsHumanizePanelOpen(true)
+    setIsHumanizing(true)
+    setHumanizedText('')
+    try {
+      const stream = await humanizeContent(data, customSettings)
+      for await (const chunk of stream) {
+        setHumanizedText((prev) => prev + chunk)
+      }
+    } catch (err) {
+      console.error("Humanize error:", err)
+      setHumanizedText('⚠️ Failed to humanize content. Please try again.')
+    } finally {
+      setIsHumanizing(false)
+    }
+  }
+
+  const handleUseHumanized = () => {
+    if (!humanizedText) return
+    setData(humanizedText)
+    setIsHumanizePanelOpen(false)
+    // Update chat history with the humanized version
+    if (chatHistory.current.length > 0) {
+      const lastIdx = chatHistory.current.length - 1
+      if (chatHistory.current[lastIdx].role === 'assistant') {
+        chatHistory.current[lastIdx].content = humanizedText
+      }
+    }
+  }
+
+  const handleAiCheck = async () => {
+    if (!data || isCheckingAi) return
+    setIsCheckingAi(true)
+    setAiCheckResult(null)
+    setIsAiCheckModalOpen(true)
+    try {
+      const result = await checkAiContent(data, customSettings)
+      setAiCheckResult(result)
+    } catch (err) {
+      console.error("AI check error:", err)
+      setAiCheckResult({
+        score: -1,
+        verdict: 'Analysis Failed',
+        details: [`Error: ${String(err)}`],
+      })
+    } finally {
+      setIsCheckingAi(false)
+    }
+  }
+
   const modelDisplayName = customSettings.model.split('/').pop() || 'gpt-oss-120b'
 
   return (
@@ -384,6 +473,46 @@ export default function Home() {
               Sign In / Register
             </button>
           )}
+
+          <button
+            onClick={handleHumanize}
+            disabled={!data || isHumanizing || isLoading}
+            className="prompt-chip"
+            style={{
+              padding: '8px 14px',
+              fontSize: '0.84rem',
+              opacity: (!data || isLoading) ? 0.4 : 1,
+              borderColor: isHumanizing ? 'var(--neon-green)' : undefined,
+              color: isHumanizing ? 'var(--neon-green)' : undefined,
+            }}
+            title="Humanize the AI-generated response"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              <path d="m15 5 4 4" />
+            </svg>
+            <span>{isHumanizing ? 'Humanizing…' : 'Humanize'}</span>
+          </button>
+
+          <button
+            onClick={handleAiCheck}
+            disabled={!data || isCheckingAi || isLoading}
+            className="prompt-chip"
+            style={{
+              padding: '8px 14px',
+              fontSize: '0.84rem',
+              opacity: (!data || isLoading) ? 0.4 : 1,
+              borderColor: isCheckingAi ? '#f59e0b' : undefined,
+              color: isCheckingAi ? '#f59e0b' : undefined,
+            }}
+            title="Check AI content percentage"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span>{isCheckingAi ? 'Checking…' : 'AI Check'}</span>
+          </button>
 
           <Link
             href="/settings"
@@ -547,6 +676,110 @@ export default function Home() {
               </svg>
               <span>{toolStatus}</span>
             </div>
+          </div>
+        )}
+
+        {/* Live Terminal Logs Console */}
+        {toolLogs.length > 0 && (
+          <div className="terminal-console fade-in">
+            <div className="terminal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="terminal-dots">
+                  <span className="terminal-dot terminal-dot-red" />
+                  <span className="terminal-dot terminal-dot-yellow" />
+                  <span className="terminal-dot terminal-dot-green" />
+                </div>
+                <div className="terminal-title">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="4 17 10 11 4 5" />
+                    <line x1="12" y1="19" x2="20" y2="19" />
+                  </svg>
+                  <span>terminal ~ web search & tool logs</span>
+                </div>
+              </div>
+
+              <div className="terminal-actions">
+                {isLoading && toolStatus ? (
+                  <span className="terminal-badge" style={{ color: '#00f0ff', borderColor: 'rgba(0, 240, 255, 0.3)', background: 'rgba(0, 240, 255, 0.1)' }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                    </svg>
+                    Running
+                  </span>
+                ) : (
+                  <span className="terminal-badge">
+                    ● {toolLogs.length} events
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  className="terminal-btn"
+                  onClick={() => {
+                    const text = toolLogs.map(l => `[${l.time}] ${l.text}`).join('\n')
+                    navigator.clipboard.writeText(text)
+                  }}
+                  title="Copy logs to clipboard"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  Copy
+                </button>
+
+                <button
+                  type="button"
+                  className="terminal-btn"
+                  onClick={() => setIsLogsExpanded(!isLogsExpanded)}
+                  title={isLogsExpanded ? 'Collapse logs' : 'Expand logs'}
+                >
+                  {isLogsExpanded ? 'Collapse' : 'Expand'}
+                </button>
+              </div>
+            </div>
+
+            {isLogsExpanded && (
+              <div className="terminal-body">
+                {toolLogs.map((log) => {
+                  const isQuery = log.text.startsWith('web search tool running for query:') || log.text.includes('running for query:');
+                  const isSuccess = log.text.startsWith('✔');
+                  const isToolAction = log.text.startsWith('🔍') || log.text.startsWith('⚙️') || log.text.startsWith('📖') || log.text.startsWith('📺') || log.text.startsWith('🌤️') || log.text.startsWith('📄');
+
+                  return (
+                    <div key={log.id} className="terminal-line">
+                      <span className="terminal-line-time">[{log.time}]</span>
+                      <span className="terminal-line-prompt">
+                        {isSuccess ? '✔' : isQuery ? '$' : '>'}
+                      </span>
+                      <span
+                        className={`terminal-line-text ${
+                          isQuery
+                            ? 'terminal-line-query'
+                            : isSuccess
+                            ? 'terminal-line-success'
+                            : isToolAction
+                            ? 'terminal-line-tool'
+                            : ''
+                        }`}
+                      >
+                        {log.text}
+                      </span>
+                    </div>
+                  );
+                })}
+                {isLoading && (
+                  <div className="terminal-line" style={{ marginTop: '4px' }}>
+                    <span className="terminal-line-prompt">$</span>
+                    <span style={{ color: 'var(--neon-green)', fontSize: '0.78rem' }}>
+                      executing search & synthesis
+                    </span>
+                    <span className="terminal-cursor" />
+                  </div>
+                )}
+                <div ref={terminalLogsEndRef} />
+              </div>
+            )}
           </div>
         )}
 
@@ -822,6 +1055,180 @@ export default function Home() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Humanize Right-Side Panel */}
+      {isHumanizePanelOpen && (
+        <div className="humanize-drawer">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, color: 'var(--neon-green)', fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="m15 5 4 4" />
+              </svg>
+              Humanize Content
+            </h2>
+            <button onClick={() => setIsHumanizePanelOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div style={{ fontSize: '0.78rem', color: 'rgba(240,253,244,0.45)', marginTop: '8px', lineHeight: 1.4 }}>
+            AI-generated text rewritten to sound naturally human — varied sentence lengths, conversational tone, and natural imperfections.
+          </div>
+
+          <div className="humanize-content markdown-content">
+            {isHumanizing && !humanizedText && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--neon-green)', fontSize: '0.9rem' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                </svg>
+                <span>Rewriting content with human voice…</span>
+              </div>
+            )}
+            {humanizedText && (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {humanizedText}
+              </ReactMarkdown>
+            )}
+            {isHumanizing && humanizedText && <span className="neon-cursor" aria-hidden="true" />}
+          </div>
+
+          <div className="humanize-actions">
+            <button
+              type="button"
+              className="neon-btn"
+              onClick={handleUseHumanized}
+              disabled={!humanizedText || isHumanizing}
+              style={{ justifyContent: 'center' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Use This</span>
+            </button>
+            <button
+              type="button"
+              className="prompt-chip"
+              onClick={handleHumanize}
+              disabled={isHumanizing || !data}
+              style={{ justifyContent: 'center', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+              </svg>
+              <span>Re-humanize</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* AI Content Check Modal */}
+      {isAiCheckModalOpen && (
+        <div className="ai-check-overlay" onClick={() => setIsAiCheckModalOpen(false)}>
+          <div className="neon-card ai-check-modal" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setIsAiCheckModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+
+            <h2 style={{ margin: '0 0 24px 0', color: '#fff', textAlign: 'center', fontSize: '1.15rem', fontWeight: 700 }}>
+              🔍 AI Content Analysis
+            </h2>
+
+            {isCheckingAi && !aiCheckResult && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '32px 0' }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+                  <circle cx="12" cy="12" r="10" stroke="var(--neon-green)" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                </svg>
+                <span style={{ color: 'rgba(240,253,244,0.6)', fontSize: '0.92rem' }}>Analyzing content patterns…</span>
+              </div>
+            )}
+
+            {aiCheckResult && (() => {
+              const score = aiCheckResult.score
+              const radius = 56
+              const circumference = 2 * Math.PI * radius
+              const offset = score >= 0 ? circumference - (score / 100) * circumference : circumference
+              const gaugeColor = score < 0 ? '#6b7280' : score <= 30 ? '#22c55e' : score <= 60 ? '#f59e0b' : '#ef4444'
+
+              return (
+                <>
+                  <div className="ai-score-gauge">
+                    <svg viewBox="0 0 128 128">
+                      <circle className="gauge-bg" cx="64" cy="64" r={radius} />
+                      <circle
+                        className="gauge-fill"
+                        cx="64"
+                        cy="64"
+                        r={radius}
+                        stroke={gaugeColor}
+                        strokeDasharray={circumference}
+                        strokeDashoffset={offset}
+                      />
+                    </svg>
+                    <div className="gauge-label">
+                      <div className="gauge-score" style={{ color: gaugeColor }}>
+                        {score >= 0 ? score : '—'}
+                      </div>
+                      <div className="gauge-unit">{score >= 0 ? '% AI' : 'Error'}</div>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    background: `${gaugeColor}15`,
+                    border: `1px solid ${gaugeColor}40`,
+                    color: gaugeColor,
+                    fontWeight: 700,
+                    fontSize: '0.95rem',
+                    letterSpacing: '0.02em',
+                  }}>
+                    {aiCheckResult.verdict}
+                  </div>
+
+                  <ul className="ai-check-details">
+                    {aiCheckResult.details.map((detail, idx) => (
+                      <li key={idx}>{detail}</li>
+                    ))}
+                  </ul>
+
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                    <button
+                      type="button"
+                      className="prompt-chip"
+                      onClick={handleHumanize}
+                      disabled={isHumanizing}
+                      style={{ flex: 1, justifyContent: 'center', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                      </svg>
+                      <span>Humanize It</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="prompt-chip"
+                      onClick={() => setIsAiCheckModalOpen(false)}
+                      style={{ flex: 1, justifyContent: 'center' }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
       )}
