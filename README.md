@@ -1,36 +1,134 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ATLAS ⚡
 
-## Getting Started
+### Advanced Toolkit for Learning, Analysis, and Synthesis
 
-First, run the development server:
+ATLAS is an authoritative, full-stack AI research and synthesis platform built with **Next.js (Turbopack)**, **Vercel AI SDK**, and **Groq**. It combines multi-source web intelligence, autonomous tool-calling loops, an AI humanizer agent, content authenticity analysis, and downloadable PDF report generation into a dark-neon interface.
+
+---
+
+## ✨ Features & Architecture
+
+### 🌐 1. Multi-Source Web Intelligence
+Beyond Wikipedia, ATLAS concurrently retrieves real-time data across multiple domains:
+- **DuckDuckGo Web Search**: General web crawling with decoded destination links.
+- **ArXiv.org**: Academic surveys, preprints, and research papers with direct abstracts.
+- **Hacker News (Algolia)**: Developer discussions, engineering articles, and community insights.
+- **GitHub**: Open-source repositories, libraries, star metrics, and descriptions.
+- **Wikipedia**: Historical overviews and encyclopedic context.
+
+### 🖥️ 2. Live Terminal Logs Console
+- Live streamed terminal logs displayed directly in the web UI.
+- Real-time query execution visibility (`web search tool running for query: ...`).
+- Source attribution indicators (`✔ Fetched data across N websites`).
+- macOS/Linux terminal controls, monospace font, copy-to-clipboard, and expand/collapse toggles.
+
+### ✍️ 3. AI Humanizer Agent
+- Dedicated secondary agent with specialized prompting to transform AI text into natural human writing.
+- Eliminates common AI cliches, balances sentence lengths, and adds organic conversational transitions.
+- Interactive slide-in drawer with real-time streaming and a single-click **"Use This"** button to replace the main workspace content.
+
+### 🔍 4. AI Content Authenticity Detector
+- Built-in evaluation of perplexity, burstiness, and formulaic AI language markers.
+- Visual circular score gauge (0–100%), verdict tags (*Likely Human*, *Mixed*, *Likely AI-Generated*), and pattern breakdowns.
+- Seamless one-click transition to the Humanizer tool.
+
+### 📄 5. Serverless PDF Report Generator
+- Automatic and on-demand downloadable PDF research reports with clean formatting.
+- Robust cross-environment compilation (Node.js & serverless/Vercel) using base64/blob generation.
+- Interactive in-app download banner and direct download triggers.
+
+### 🛠️ 6. Tool Suite
+- **Web Search**: Multi-platform search across DDG, ArXiv, HN, GitHub, and Wiki.
+- **YouTube Recommendations**: Video tutorials, lectures, and educational content.
+- **Weather Forecaster**: Live meteorological conditions for global locations.
+- **Date & Time Synchronizer**: Real-time UTC temporal reference.
+- **Wikipedia Lookup**: In-depth article section scraping.
+- **PDF Generation**: Document compilation from synthesized research.
+
+### 🔐 7. Authentication & Chat History
+- JWT authentication (Sign Up / Sign In).
+- MongoDB session storage for saving, syncing, and reloading past research threads.
+
+---
+
+## 🚀 Tech Stack
+
+- **Framework**: [Next.js 16 (Turbopack)](https://nextjs.org/) + React 19
+- **LLM Orchestration**: [Vercel AI SDK](https://sdk.vercel.ai/) (`streamText`, `stepCountIs`, `tool`)
+- **Model Inference**: [Groq Cloud](https://groq.com/) (`openai/gpt-oss-120b`, `llama-3.3-70b-versatile`)
+- **Styling**: Cyberpunk dark-neon aesthetics with custom CSS tokens and glassmorphism
+- **Document Engine**: `jspdf` for document synthesis
+- **Database**: MongoDB with Mongoose (chat history & user credentials)
+
+---
+
+## 📦 Getting Started
+
+### Prerequisites
+- Node.js 18+ or 20+
+- A [Groq API Key](https://console.groq.com/keys)
+- (Optional) MongoDB connection string for chat history and auth
+
+### 1. Installation
+
+```bash
+git clone <repo-url>
+cd my-app
+npm install
+```
+
+### 2. Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+# Required for AI inference
+GROQ_API_KEY=your_groq_api_key_here
+
+# Optional: For Authentication & Cloud Chat History
+MONGODB_URI=mongodb://localhost:27017/atlas
+JWT_SECRET=your_jwt_secret_key_here
+```
+
+### 3. Running Locally
+
+Start the development server with Turbopack:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🏗️ Production Build
 
-## Learn More
+To build and verify the application for production deployment:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To start the production server:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm start
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## ⚙️ Configuration & Settings
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Click the **Settings** icon in the navigation bar to configure:
+- **Custom Groq API Key**: Override the server default with your personal key.
+- **Model Selector**: Switch between `openai/gpt-oss-120b`, `llama-3.3-70b-versatile`, etc.
+- **Temperature & Max Steps**: Adjust generation randomness and autonomous tool-call loops.
+- **Tool Toggles**: Enable or disable specific tools (Web Search, YouTube, Weather, PDF, etc.).
+- **System Prompt**: Customize the core agent behavior and synthesis instructions.
+
+---
+
+## 📄 License
+
+MIT License. Designed and built with ATLAS.
