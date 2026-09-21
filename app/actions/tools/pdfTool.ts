@@ -17,7 +17,7 @@ export const pdfTool = tool({
         title,
         downloadUrl,
         filename,
-        message: `PDF generated successfully. The downloadable link is ${downloadUrl}. Include a markdown link: [📥 Download ${title} (PDF)](${downloadUrl}) in your final response!`,
+        message: `PDF generated successfully at ${downloadUrl}. The UI will automatically provide a prominent Download button. If you link to the PDF in markdown, use ONLY the exact relative path: [📥 Download ${title} (PDF)](${downloadUrl}). Never use fake domains like example.com.`,
       };
     } catch (error) {
       console.error("PDF generation failed:", error);

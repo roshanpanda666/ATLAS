@@ -2,11 +2,49 @@
 import test from "./actions/simpleaction"
 import { getDynamicSuggestions } from "./actions/getDynamicSuggestions"
 import { exportResponseToPdf } from "./actions/exportPdf"
-import { DEFAULT_SUGGESTIONS, DEFAULT_SETTINGS, type Message, type Suggestion, type ChatSettings } from "./types/chat"
+import { DEFAULT_SUGGESTIONS, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT, type Message, type Suggestion, type ChatSettings } from "./types/chat"
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+
+function triggerBrowserDownload(urlOrData: string, filename: string) {
+  if (!urlOrData) return
+
+  const downloadFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`
+  let objectUrl = urlOrData
+  let isBlob = false
+
+  if (urlOrData.startsWith('data:')) {
+    try {
+      const parts = urlOrData.split(',')
+      const base64 = parts[1] || parts[0]
+      const binaryString = window.atob(base64)
+      const len = binaryString.length
+      const bytes = new Uint8Array(len)
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' })
+      objectUrl = URL.createObjectURL(blob)
+      isBlob = true
+    } catch (err) {
+      console.warn("Base64 to blob conversion failed, using direct dataUrl:", err)
+      objectUrl = urlOrData
+    }
+  }
+
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = downloadFilename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  if (isBlob) {
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 45000)
+  }
+}
 
 export default function Home() {
   const [data, setData] = useState("")
@@ -15,7 +53,7 @@ export default function Home() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>(DEFAULT_SUGGESTIONS)
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false)
   const [activePrompt, setActivePrompt] = useState<string | null>(null)
-  const [pdfData, setPdfData] = useState<{ url: string; title: string } | null>(null)
+  const [pdfData, setPdfData] = useState<{ url: string; title: string; filename?: string } | null>(null)
   const [isExportingPdf, setIsExportingPdf] = useState(false)
   const [customSettings, setCustomSettings] = useState<ChatSettings>(DEFAULT_SETTINGS)
 
@@ -42,7 +80,14 @@ export default function Home() {
     try {
       const savedSettings = localStorage.getItem('antigravity_chat_settings')
       if (savedSettings) {
-        setCustomSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) })
+        const parsed = JSON.parse(savedSettings)
+        if (parsed.systemPrompt && (parsed.systemPrompt.includes('{downloadUrl}') || parsed.systemPrompt.includes('example.com'))) {
+          parsed.systemPrompt = DEFAULT_SYSTEM_PROMPT
+          try {
+            localStorage.setItem('antigravity_chat_settings', JSON.stringify(parsed))
+          } catch {}
+        }
+        setCustomSettings({ ...DEFAULT_SETTINGS, ...parsed })
       }
       
       const savedToken = localStorage.getItem('atlas_auth_token')
@@ -199,6 +244,7 @@ export default function Home() {
     setToolStatus(null)
 
     let fullResponse = ''
+    let generatedPdfUrl: string | null = null
 
     try {
       const stream = await test(recentMessages, customSettings)
@@ -207,13 +253,28 @@ export default function Home() {
           setToolStatus(chunk.slice('__TOOL__:'.length))
         } else if (chunk.startsWith('__PDF__:')) {
           const raw = chunk.slice('__PDF__:'.length)
-          const [url, title] = raw.split('|')
-          setPdfData({ url, title: title || 'Research Report' })
+          const [url, title, filename] = raw.split('|')
+          generatedPdfUrl = url
+          setPdfData({ url, title: title || 'Research Report', filename: filename || `${(title || 'report').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf` })
         } else {
           setToolStatus(null)
           fullResponse += chunk
           setData((prev) => prev + chunk)
         }
+      }
+
+      // If user asked for a PDF or response has a PDF download section, but no tool emitted a PDF, generate it automatically as fallback
+      const userAskedForPdf = /\b(pdf|download|document|report)\b/i.test(prompt)
+      const responseHasPdfSection = /download.*pdf|pdf.*download/i.test(fullResponse)
+      if (!generatedPdfUrl && (userAskedForPdf || responseHasPdfSection) && fullResponse.trim().length > 50) {
+        const fallbackTitle = prompt.length > 40 ? prompt.slice(0, 40) + '…' : prompt || 'Research Report'
+        exportResponseToPdf(fallbackTitle, fullResponse)
+          .then((res) => {
+            if (res?.downloadUrl) {
+              setPdfData({ url: res.downloadUrl, title: fallbackTitle, filename: res.filename })
+            }
+          })
+          .catch((err) => console.error("Auto PDF generation fallback failed:", err))
       }
 
       // Add assistant response to history
@@ -259,18 +320,16 @@ export default function Home() {
     executePrompt(query)
   }
 
-  const handleExportPdf = async () => {
-    if (!data || isExportingPdf) return
+  const handleExportPdf = async (customContent?: string, customTitle?: string) => {
+    const contentToExport = customContent || data
+    if (!contentToExport || isExportingPdf) return
     setIsExportingPdf(true)
     try {
-      const reportTitle = activePrompt || 'Research Report'
-      const res = await exportResponseToPdf(reportTitle, data)
+      const reportTitle = customTitle || activePrompt || 'Research Report'
+      const res = await exportResponseToPdf(reportTitle, contentToExport)
       if (res?.downloadUrl) {
-        setPdfData({ url: res.downloadUrl, title: reportTitle })
-        const link = document.createElement('a')
-        link.href = res.downloadUrl
-        link.download = res.filename
-        link.click()
+        setPdfData({ url: res.downloadUrl, title: reportTitle, filename: res.filename })
+        triggerBrowserDownload(res.downloadUrl, res.filename)
       }
     } catch (err) {
       console.error("Export PDF error:", err)
@@ -535,7 +594,7 @@ export default function Home() {
               {data && (
                 <button
                   type="button"
-                  onClick={handleExportPdf}
+                  onClick={() => handleExportPdf()}
                   disabled={isExportingPdf}
                   className="prompt-chip"
                   style={{
@@ -592,9 +651,9 @@ export default function Home() {
                   </div>
                 </div>
 
-                <a
-                  href={pdfData.url}
-                  download
+                <button
+                  type="button"
+                  onClick={() => triggerBrowserDownload(pdfData.url, pdfData.filename || `${pdfData.title}.pdf`)}
                   className="neon-btn"
                   style={{
                     padding: '8px 16px',
@@ -603,6 +662,7 @@ export default function Home() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
+                    cursor: 'pointer',
                   }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -611,13 +671,66 @@ export default function Home() {
                     <line x1="12" y1="15" x2="12" y2="3" />
                   </svg>
                   <span>Download PDF</span>
-                </a>
+                </button>
               </div>
             )}
 
             {data ? (
               <div className="markdown-content">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    a: ({ href, children, ...props }) => {
+                      const text = String(children || '')
+                      const isPdfOrDownload =
+                        (href && (href.endsWith('.pdf') || href.includes('/downloads/') || href.includes('example.com') || href.includes('files.atlas.ai'))) ||
+                        /download.*pdf|pdf.*download/i.test(text) ||
+                        text.includes('📥')
+
+                      if (isPdfOrDownload) {
+                        return (
+                          <button
+                            type="button"
+                            className="neon-btn"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '5px 12px',
+                              margin: '6px 0',
+                              fontSize: '0.84rem',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                              verticalAlign: 'middle',
+                            }}
+                            onClick={async (e) => {
+                              e.preventDefault()
+                              if (pdfData?.url) {
+                                triggerBrowserDownload(pdfData.url, pdfData.filename || `${pdfData.title}.pdf`)
+                                return
+                              }
+                              await handleExportPdf()
+                            }}
+                            title="Download formatted PDF report"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                              <polyline points="7 10 12 15 17 10" />
+                              <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            <span>{children || 'Download PDF Report'}</span>
+                          </button>
+                        )
+                      }
+
+                      return (
+                        <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+                          {children}
+                        </a>
+                      )
+                    },
+                  }}
+                >
                   {data}
                 </ReactMarkdown>
                 {isLoading && <span className="neon-cursor" aria-hidden="true" />}

@@ -8,7 +8,7 @@ export async function generatePdfFile({
 }: {
   title: string;
   content: string;
-}): Promise<{ downloadUrl: string; filename: string }> {
+}): Promise<{ downloadUrl: string; dataUrl: string; filename: string; base64: string }> {
   const sanitizeWinAnsi = (text: string) => {
     return text
       .replace(/[\u2018\u2019]/g, "'")
@@ -372,20 +372,30 @@ export async function generatePdfFile({
 
   const pdfBytes = await doc.save();
 
-  // Save to public/downloads directory
-  const downloadsDir = path.join(process.cwd(), 'public', 'downloads');
-  if (!fs.existsSync(downloadsDir)) {
-    fs.mkdirSync(downloadsDir, { recursive: true });
-  }
-
   const safeTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30) || 'report';
   const filename = `${safeTitle}-${Date.now()}.pdf`;
-  const filePath = path.join(downloadsDir, filename);
 
-  fs.writeFileSync(filePath, pdfBytes);
+  // Encode PDF bytes to base64 Data URL so it is 100% self-contained and works in production/serverless (Vercel, AWS Lambda, Docker)
+  const base64 = Buffer.from(pdfBytes).toString('base64');
+  const dataUrl = `data:application/pdf;base64,${base64}`;
+
+  // Optional local file cache (survives when filesystem is writable, safely ignored in read-only serverless like Vercel)
+  try {
+    const downloadsDir = path.join(process.cwd(), 'public', 'downloads');
+    if (!fs.existsSync(downloadsDir)) {
+      fs.mkdirSync(downloadsDir, { recursive: true });
+    }
+    const filePath = path.join(downloadsDir, filename);
+    fs.writeFileSync(filePath, pdfBytes);
+  } catch {
+    // In production (Vercel / AWS Lambda), the filesystem is read-only.
+    // That is completely normal and expected; we use the self-contained Data URL / Blob instead.
+  }
 
   return {
-    downloadUrl: `/downloads/${filename}`,
+    downloadUrl: dataUrl,
+    dataUrl,
     filename,
+    base64,
   };
 }

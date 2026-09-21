@@ -41,9 +41,9 @@ export default async function* test(messages: Message[], settings?: Partial<Chat
       console.log(label);
       yield `__TOOL__:${label}`;
     } else if (part.type === 'tool-result' && part.toolName === 'generatePdf') {
-      const output = part.output as { downloadUrl?: string; title?: string };
+      const output = part.output as { downloadUrl?: string; title?: string; filename?: string };
       if (output?.downloadUrl) {
-        yield `__PDF__:${output.downloadUrl}|${output.title || 'Research Report'}`;
+        yield `__PDF__:${output.downloadUrl}|${output.title || 'Research Report'}|${output.filename || ''}`;
       }
     } else if (part.type === 'text-delta') {
       hasEmittedText = true;
