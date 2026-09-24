@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { verifyApiKey } from "../actions/verifyApiKey"
 import { DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT, type ChatSettings } from "../types/chat"
+import { PRESET_ACCENT_COLORS, applyClientAccent, getClientAccent } from "../lib/theme"
 
 const AVAILABLE_MODELS = [
   { id: 'openai/gpt-oss-120b', name: 'OpenAI GPT-OSS 120B', desc: 'Flagship reasoning & tool orchestration (Default)' },
@@ -12,6 +13,19 @@ const AVAILABLE_MODELS = [
   { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', desc: 'Google Gemma 2 instruction-tuned model' },
 ];
 
+function hslToHex(h: number, s: number, l: number): string {
+  l /= 100;
+  const a = (s * Math.min(l, 1 - l)) / 100;
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<ChatSettings>(DEFAULT_SETTINGS)
   const [showApiKey, setShowApiKey] = useState(false)
@@ -19,20 +33,46 @@ export default function SettingsPage() {
   const [verifyResult, setVerifyResult] = useState<{ success: boolean; message: string } | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
+  // Client-Side Accent Color State
+  const [accentColor, setAccentColor] = useState<string>('#38bdf8')
+  const [hue, setHue] = useState<number>(199)
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('antigravity_chat_settings')
+      const initialAccent = getClientAccent('#38bdf8')
+      setAccentColor(initialAccent)
+      applyClientAccent(initialAccent)
+
       if (saved) {
-        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(saved) })
+        const parsed = JSON.parse(saved)
+        setSettings({ ...DEFAULT_SETTINGS, ...parsed })
+        if (parsed.accentColor) {
+          setAccentColor(parsed.accentColor)
+          applyClientAccent(parsed.accentColor)
+        }
       }
     } catch (e) {
       console.error("Failed to load settings:", e)
     }
   }, [])
 
+  const handleColorChange = (newColor: string) => {
+    setAccentColor(newColor)
+    setSettings((prev) => ({ ...prev, accentColor: newColor }))
+    applyClientAccent(newColor)
+  }
+
+  const handleHueScaleChange = (newHue: number) => {
+    setHue(newHue)
+    const hex = hslToHex(newHue, 92, 60)
+    handleColorChange(hex)
+  }
+
   const handleSave = () => {
     try {
       localStorage.setItem('antigravity_chat_settings', JSON.stringify(settings))
+      applyClientAccent(accentColor)
       setToastMessage('Settings successfully saved!')
       setTimeout(() => setToastMessage(null), 3000)
     } catch (e) {
@@ -43,7 +83,10 @@ export default function SettingsPage() {
   const handleReset = () => {
     if (confirm('Reset all settings to default values?')) {
       setSettings(DEFAULT_SETTINGS)
+      setAccentColor('#38bdf8')
+      applyClientAccent('#38bdf8')
       localStorage.removeItem('antigravity_chat_settings')
+      localStorage.removeItem('atlas_theme_accent')
       setToastMessage('Reset to default configuration.')
       setTimeout(() => setToastMessage(null), 3000)
     }
@@ -75,24 +118,23 @@ export default function SettingsPage() {
   return (
     <main
       style={{
+        minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        minHeight: '100vh',
-        padding: '40px 20px',
-        gap: '24px',
+        padding: '36px 20px',
+        maxWidth: '900px',
+        margin: '0 auto',
       }}
     >
-      {/* Top navigation */}
+      {/* Top Bar Navigation */}
       <div
         style={{
           width: '100%',
-          maxWidth: '820px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '12px',
+          marginBottom: '28px',
         }}
       >
         <Link
@@ -100,7 +142,7 @@ export default function SettingsPage() {
           className="prompt-chip"
           style={{
             padding: '8px 16px',
-            fontSize: '0.84rem',
+            fontSize: '0.86rem',
             textDecoration: 'none',
             display: 'inline-flex',
             alignItems: 'center',
@@ -112,7 +154,7 @@ export default function SettingsPage() {
         </Link>
 
         <div className="neon-badge">
-          <span className="neon-badge-dot" />
+          <span className="neon-badge-dot" style={{ background: accentColor }} />
           ATLAS Settings Manager
         </div>
       </div>
@@ -138,16 +180,16 @@ export default function SettingsPage() {
               color: '#ffffff',
             }}
           >
-            ATLAS — System Configuration<span style={{ color: 'var(--neon-green)' }}>.</span>
+            ATLAS — System Configuration<span style={{ color: accentColor }}>.</span>
           </h1>
-          <p style={{ color: 'rgba(240, 253, 244, 0.55)', fontSize: '0.95rem', margin: 0 }}>
-            Configure your Groq API key, model architecture, active tools, system persona, and generation parameters for ATLAS.
+          <p style={{ color: 'rgba(255, 255, 255, 0.55)', fontSize: '0.95rem', margin: 0 }}>
+            Configure your Groq API key, client-side accent color scale, model architecture, active tools, and parameters.
           </p>
         </div>
 
         {/* 1. API Credentials */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <label style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--neon-green)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
             1. Groq API Key
           </label>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
@@ -170,7 +212,7 @@ export default function SettingsPage() {
                   transform: 'translateY(-50%)',
                   background: 'transparent',
                   border: 'none',
-                  color: 'rgba(240, 253, 244, 0.6)',
+                  color: 'rgba(255, 255, 255, 0.5)',
                   cursor: 'pointer',
                   fontSize: '0.75rem',
                 }}
@@ -186,7 +228,7 @@ export default function SettingsPage() {
               style={{
                 padding: '0 16px',
                 fontSize: '0.84rem',
-                borderColor: 'var(--neon-green-border)',
+                borderColor: 'rgba(255, 255, 255, 0.12)',
                 whiteSpace: 'nowrap',
               }}
             >
@@ -197,7 +239,7 @@ export default function SettingsPage() {
             <div
               style={{
                 fontSize: '0.84rem',
-                color: verifyResult.success ? 'var(--neon-green)' : '#f87171',
+                color: verifyResult.success ? '#34d399' : '#f87171',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -209,10 +251,208 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* 2. Model Architecture */}
+        {/* 2. Color Theme & Scale (Client-Side Only) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', paddingBottom: '6px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <div>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff', letterSpacing: '0.02em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                2. Theme Accent &amp; Color Scale
+                <span style={{ fontSize: '0.68rem', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.08)', color: accentColor, fontWeight: 500, letterSpacing: 'normal' }}>
+                  Client-side only
+                </span>
+              </label>
+              <div style={{ fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.45)', marginTop: '4px' }}>
+                Select a preset, slide through the continuous spectrum, or input a custom hex code.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.78rem', color: '#a1a1aa', fontFamily: 'var(--font-geist-mono, monospace)' }}>
+                {accentColor}
+              </span>
+              <div
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '6px',
+                  background: accentColor,
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: `0 0 10px ${accentColor}44`,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Preset Swatches */}
+          <div>
+            <div style={{ fontSize: '0.74rem', color: '#71717a', marginBottom: '8px', fontWeight: 500 }}>
+              Curated Presets:
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {PRESET_ACCENT_COLORS.map((preset) => {
+                const isSelected = accentColor.toLowerCase() === preset.hex.toLowerCase()
+                return (
+                  <button
+                    key={preset.hex}
+                    type="button"
+                    onClick={() => handleColorChange(preset.hex)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: `1px solid ${isSelected ? accentColor : 'rgba(255, 255, 255, 0.08)'}`,
+                      background: isSelected ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                      color: isSelected ? '#ffffff' : '#a1a1aa',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        background: preset.hex,
+                        display: 'inline-block',
+                        boxShadow: isSelected ? `0 0 8px ${preset.hex}` : 'none',
+                      }}
+                    />
+                    <span>{preset.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Continuous Color Scale (Hue Spectrum Slider) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.74rem', color: '#71717a', fontWeight: 500 }}>
+                Continuous Spectrum Scale:
+              </span>
+              <span style={{ fontSize: '0.72rem', color: '#a1a1aa', fontFamily: 'var(--font-geist-mono, monospace)' }}>
+                {hue}° Hue
+              </span>
+            </div>
+
+            <div style={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+              <input
+                type="range"
+                min="0"
+                max="360"
+                value={hue}
+                onChange={(e) => handleHueScaleChange(parseInt(e.target.value, 10))}
+                style={{
+                  width: '100%',
+                  height: '12px',
+                  borderRadius: '6px',
+                  appearance: 'none',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Custom Hex Picker & Input */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '0.74rem', color: '#71717a', fontWeight: 500, minWidth: '85px' }}>
+              Custom Hex:
+            </span>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="color"
+                value={accentColor}
+                onChange={(e) => handleColorChange(e.target.value)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  background: 'transparent',
+                  padding: '2px',
+                }}
+                title="Open native color picker"
+              />
+              <input
+                type="text"
+                value={accentColor}
+                onChange={(e) => handleColorChange(e.target.value)}
+                placeholder="#38bdf8"
+                className="neon-input"
+                style={{
+                  width: '110px',
+                  padding: '6px 10px',
+                  fontSize: '0.8rem',
+                  fontFamily: 'var(--font-geist-mono, monospace)',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Live Component Preview Card */}
+          <div
+            style={{
+              padding: '14px 18px',
+              borderRadius: '10px',
+              background: 'rgba(0, 0, 0, 0.35)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <div style={{ fontSize: '0.72rem', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+              Live Workspace Preview
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
+              <div
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '9999px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: `1px solid ${accentColor}66`,
+                  color: accentColor,
+                  fontSize: '0.78rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: accentColor }} />
+                Active Badge
+              </div>
+
+              <button
+                type="button"
+                className="prompt-chip"
+                style={{
+                  borderColor: `${accentColor}88`,
+                  color: '#ffffff',
+                  fontSize: '0.78rem',
+                  padding: '5px 12px',
+                }}
+              >
+                Interactive Chip
+              </button>
+
+              <span style={{ color: accentColor, fontSize: '0.8rem', textDecoration: 'underline' }}>
+                Sample Accent Link
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Model Architecture */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <label style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--neon-green)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            2. Language Model
+          <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+            3. Language Model
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
             {AVAILABLE_MODELS.map((model) => {
@@ -225,16 +465,16 @@ export default function SettingsPage() {
                     padding: '14px',
                     borderRadius: '12px',
                     cursor: 'pointer',
-                    background: isSelected ? 'rgba(0, 255, 136, 0.09)' : 'rgba(18, 26, 21, 0.6)',
-                    border: `1px solid ${isSelected ? 'var(--neon-green)' : 'rgba(0, 255, 136, 0.15)'}`,
-                    boxShadow: isSelected ? '0 0 16px rgba(0, 255, 136, 0.18)' : 'none',
-                    transition: 'all 0.2s ease',
+                    background: isSelected ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                    border: `1px solid ${isSelected ? accentColor : 'rgba(255, 255, 255, 0.08)'}`,
+                    boxShadow: isSelected ? `0 4px 16px ${accentColor}22` : 'none',
+                    transition: 'all 0.15s ease',
                   }}
                 >
-                  <div style={{ color: isSelected ? 'var(--neon-green)' : '#ffffff', fontWeight: 600, fontSize: '0.92rem', marginBottom: '4px' }}>
+                  <div style={{ color: isSelected ? '#ffffff' : '#e4e4e7', fontWeight: 600, fontSize: '0.92rem', marginBottom: '4px' }}>
                     {model.name}
                   </div>
-                  <div style={{ color: 'rgba(240, 253, 244, 0.45)', fontSize: '0.78rem' }}>
+                  <div style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: '0.78rem' }}>
                     {model.desc}
                   </div>
                 </div>
@@ -243,11 +483,11 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* 3. Parameters (Temperature & Max Steps) */}
+        {/* 4. Parameters (Temperature & Max Steps) */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--neon-green)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                 Temperature
               </label>
               <span style={{ fontSize: '0.84rem', color: '#ffffff', fontFamily: 'var(--font-geist-mono, monospace)' }}>
@@ -261,9 +501,9 @@ export default function SettingsPage() {
               step="0.05"
               value={settings.temperature}
               onChange={(e) => setSettings({ ...settings, temperature: parseFloat(e.target.value) })}
-              style={{ accentColor: 'var(--neon-green)', cursor: 'pointer' }}
+              style={{ accentColor: accentColor, cursor: 'pointer' }}
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'rgba(240, 253, 244, 0.4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.4)' }}>
               <span>0.0 (Precise)</span>
               <span>1.0 (Creative)</span>
             </div>
@@ -271,7 +511,7 @@ export default function SettingsPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--neon-green)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
                 Max Tool Steps
               </label>
               <span style={{ fontSize: '0.84rem', color: '#ffffff', fontFamily: 'var(--font-geist-mono, monospace)' }}>
@@ -285,19 +525,19 @@ export default function SettingsPage() {
               step="1"
               value={settings.maxSteps}
               onChange={(e) => setSettings({ ...settings, maxSteps: parseInt(e.target.value, 10) })}
-              style={{ accentColor: 'var(--neon-green)', cursor: 'pointer' }}
+              style={{ accentColor: accentColor, cursor: 'pointer' }}
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'rgba(240, 253, 244, 0.4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.4)' }}>
               <span>1 step</span>
               <span>10 multi-tool chain</span>
             </div>
           </div>
         </div>
 
-        {/* 4. Active Tool Toggles */}
+        {/* 5. Active Tool Toggles */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <label style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--neon-green)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            4. Enabled AI Tools
+          <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+            5. Enabled AI Tools
           </label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
             {[
@@ -317,19 +557,19 @@ export default function SettingsPage() {
                     padding: '12px 14px',
                     borderRadius: '10px',
                     cursor: 'pointer',
-                    background: isEnabled ? 'rgba(0, 255, 136, 0.08)' : 'rgba(18, 26, 21, 0.4)',
-                    border: `1px solid ${isEnabled ? 'rgba(0, 255, 136, 0.4)' : 'rgba(255, 255, 255, 0.08)'}`,
+                    background: isEnabled ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.02)',
+                    border: `1px solid ${isEnabled ? accentColor : 'rgba(255, 255, 255, 0.06)'}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.86rem', color: isEnabled ? '#ffffff' : 'rgba(255, 255, 255, 0.4)' }}>
                       {tool.label}
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: 'rgba(240, 253, 244, 0.4)' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.4)' }}>
                       {tool.desc}
                     </div>
                   </div>
@@ -338,12 +578,12 @@ export default function SettingsPage() {
                       width: '18px',
                       height: '18px',
                       borderRadius: '4px',
-                      border: `1px solid ${isEnabled ? 'var(--neon-green)' : 'rgba(255, 255, 255, 0.2)'}`,
-                      background: isEnabled ? 'var(--neon-green)' : 'transparent',
+                      border: `1px solid ${isEnabled ? accentColor : 'rgba(255, 255, 255, 0.2)'}`,
+                      background: isEnabled ? accentColor : 'transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#04140b',
+                      color: '#09090b',
                       fontSize: '0.75rem',
                       fontWeight: 800,
                     }}
@@ -356,11 +596,11 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* 5. System Persona / Prompt */}
+        {/* 6. System Persona / Prompt */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--neon-green)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-              5. System Prompt &amp; Persona
+            <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+              6. System Prompt &amp; Persona
             </label>
             <button
               type="button"
@@ -368,7 +608,7 @@ export default function SettingsPage() {
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: 'rgba(0, 255, 136, 0.7)',
+                color: '#a1a1aa',
                 fontSize: '0.78rem',
                 cursor: 'pointer',
                 textDecoration: 'underline',
@@ -398,7 +638,7 @@ export default function SettingsPage() {
             justifyContent: 'space-between',
             alignItems: 'center',
             paddingTop: '16px',
-            borderTop: '1px solid rgba(0, 255, 136, 0.15)',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
             flexWrap: 'wrap',
             gap: '12px',
           }}
@@ -418,7 +658,7 @@ export default function SettingsPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {toastMessage && (
-              <span style={{ color: 'var(--neon-green)', fontSize: '0.86rem', fontWeight: 500 }} className="fade-in">
+              <span style={{ color: '#34d399', fontSize: '0.86rem', fontWeight: 500 }} className="fade-in">
                 ✓ {toastMessage}
               </span>
             )}

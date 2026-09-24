@@ -24,6 +24,27 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var accent = localStorage.getItem('atlas_theme_accent');
+                if (!accent) {
+                  var raw = localStorage.getItem('antigravity_chat_settings');
+                  if (raw) {
+                    var parsed = JSON.parse(raw);
+                    if (parsed.accentColor) accent = parsed.accentColor;
+                  }
+                }
+                if (accent) {
+                  document.documentElement.style.setProperty('--accent-color', accent);
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body style={{ margin: 0 }} suppressHydrationWarning>{children}</body>
     </html>
   );

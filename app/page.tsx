@@ -5,6 +5,7 @@ import { exportResponseToPdf } from "./actions/exportPdf"
 import { humanizeContent } from "./actions/humanize"
 import { checkAiContent, type AiCheckResult } from "./actions/checkAiContent"
 import { DEFAULT_SUGGESTIONS, DEFAULT_SETTINGS, DEFAULT_SYSTEM_PROMPT, type Message, type Suggestion, type ChatSettings } from "./types/chat"
+import { applyClientAccent, getClientAccent } from "./lib/theme"
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import ReactMarkdown from "react-markdown"
@@ -101,6 +102,9 @@ export default function Home() {
   // Load Settings and check Auto-login
   useEffect(() => {
     try {
+      const accent = getClientAccent()
+      applyClientAccent(accent)
+
       const savedSettings = localStorage.getItem('antigravity_chat_settings')
       if (savedSettings) {
         const parsed = JSON.parse(savedSettings)
@@ -111,6 +115,9 @@ export default function Home() {
           } catch {}
         }
         setCustomSettings({ ...DEFAULT_SETTINGS, ...parsed })
+        if (parsed.accentColor) {
+          applyClientAccent(parsed.accentColor)
+        }
       }
       
       const savedToken = localStorage.getItem('atlas_auth_token')
@@ -469,7 +476,7 @@ export default function Home() {
               Logout ({username})
             </button>
           ) : (
-            <button onClick={() => setIsAuthModalOpen(true)} className="prompt-chip" style={{ padding: '8px 14px', fontSize: '0.84rem', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}>
+            <button onClick={() => setIsAuthModalOpen(true)} className="prompt-chip" style={{ padding: '8px 14px', fontSize: '0.84rem', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#ffffff' }}>
               Sign In / Register
             </button>
           )}
@@ -482,8 +489,8 @@ export default function Home() {
               padding: '8px 14px',
               fontSize: '0.84rem',
               opacity: (!data || isLoading) ? 0.4 : 1,
-              borderColor: isHumanizing ? 'var(--neon-green)' : undefined,
-              color: isHumanizing ? 'var(--neon-green)' : undefined,
+              borderColor: isHumanizing ? '#ffffff' : undefined,
+              color: isHumanizing ? '#ffffff' : undefined,
             }}
             title="Humanize the AI-generated response"
           >
@@ -537,7 +544,7 @@ export default function Home() {
       <div className="fade-in" style={{ textAlign: 'center', maxWidth: '680px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
           <div className="neon-badge">
-            <span className="neon-badge-dot" />
+            <span className="neon-badge-dot" style={{ background: 'var(--accent-color)' }} />
             ATLAS OS • Groq {modelDisplayName}
           </div>
         </div>
@@ -552,15 +559,15 @@ export default function Home() {
             lineHeight: 1.05,
           }}
         >
-          ATLAS<span style={{ color: 'var(--neon-green)', textShadow: '0 0 16px var(--neon-green)' }}>.</span>
+          ATLAS<span style={{ color: 'var(--accent-color)' }}>.</span>
         </h1>
 
         <div
           style={{
-            fontSize: 'clamp(0.82rem, 1.8vw, 0.98rem)',
-            fontWeight: 600,
-            color: 'var(--neon-green)',
-            letterSpacing: '0.05em',
+            fontSize: 'clamp(0.82rem, 1.8vw, 0.92rem)',
+            fontWeight: 500,
+            color: '#a1a1aa',
+            letterSpacing: '0.04em',
             textTransform: 'uppercase',
             marginBottom: '10px',
           }}
@@ -601,7 +608,7 @@ export default function Home() {
               {chatHistory.current.length > 0 ? "⚡ CONTEXTUAL FOLLOW-UPS" : "⚡ SUGGESTED PROMPTS"}
             </span>
             {isFetchingSuggestions && (
-              <span style={{ fontSize: '0.72rem', color: 'var(--neon-green)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontSize: '0.72rem', color: '#38bdf8', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
                 </svg>
@@ -771,7 +778,7 @@ export default function Home() {
                 {isLoading && (
                   <div className="terminal-line" style={{ marginTop: '4px' }}>
                     <span className="terminal-line-prompt">$</span>
-                    <span style={{ color: 'var(--neon-green)', fontSize: '0.78rem' }}>
+                    <span style={{ color: '#38bdf8', fontSize: '0.78rem' }}>
                       executing search & synthesis
                     </span>
                     <span className="terminal-cursor" />
@@ -795,7 +802,7 @@ export default function Home() {
                 gap: '12px',
                 paddingBottom: '14px',
                 marginBottom: '18px',
-                borderBottom: '1px solid rgba(0, 255, 136, 0.15)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                 flexWrap: 'wrap',
               }}
             >
@@ -804,14 +811,14 @@ export default function Home() {
                   <span
                     style={{
                       fontSize: '0.72rem',
-                      fontWeight: 700,
-                      color: 'var(--neon-green)',
-                      letterSpacing: '0.06em',
+                      fontWeight: 600,
+                      color: '#d4d4d8',
+                      letterSpacing: '0.04em',
                       textTransform: 'uppercase',
-                      background: 'rgba(0, 255, 136, 0.1)',
+                      background: 'rgba(255, 255, 255, 0.06)',
                       padding: '3px 8px',
                       borderRadius: '4px',
-                      border: '1px solid rgba(0, 255, 136, 0.25)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
                       flexShrink: 0,
                     }}
                   >
@@ -832,10 +839,10 @@ export default function Home() {
                   className="prompt-chip"
                   style={{
                     marginLeft: 'auto',
-                    background: 'rgba(0, 255, 136, 0.08)',
-                    borderColor: 'rgba(0, 255, 136, 0.3)',
-                    color: 'var(--neon-green)',
-                    fontWeight: 600,
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderColor: 'rgba(255, 255, 255, 0.12)',
+                    color: '#ffffff',
+                    fontWeight: 500,
                     padding: '5px 12px',
                     fontSize: '0.8rem',
                   }}
@@ -866,12 +873,12 @@ export default function Home() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  background: 'rgba(0, 255, 136, 0.08)',
-                  border: '1px solid rgba(0, 255, 136, 0.35)',
+                  background: 'rgba(255, 255, 255, 0.035)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '12px',
                   padding: '12px 18px',
                   marginBottom: '20px',
-                  boxShadow: '0 0 16px rgba(0, 255, 136, 0.12)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
                   flexWrap: 'wrap',
                   gap: '12px',
                 }}
@@ -880,7 +887,7 @@ export default function Home() {
                   <span style={{ fontSize: '1.4rem' }}>📄</span>
                   <div>
                     <div style={{ color: '#ffffff', fontWeight: 600, fontSize: '0.92rem' }}>{pdfData.title}</div>
-                    <div style={{ color: 'var(--neon-green)', fontSize: '0.75rem' }}>Downloadable Research Document Ready</div>
+                    <div style={{ color: '#a1a1aa', fontSize: '0.75rem' }}>Downloadable Research Document Ready</div>
                   </div>
                 </div>
 
@@ -971,7 +978,7 @@ export default function Home() {
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(240, 253, 244, 0.45)', fontSize: '0.98rem' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
-                  <circle cx="12" cy="12" r="10" stroke="var(--neon-green)" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                  <circle cx="12" cy="12" r="10" stroke="#71717a" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
                 </svg>
                 <span>Synthesizing structural response…</span>
               </div>
@@ -987,16 +994,16 @@ export default function Home() {
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          color: 'rgba(240, 253, 244, 0.35)',
+          color: 'rgba(255, 255, 255, 0.35)',
           fontSize: '0.82rem',
         }}
       >
         <span>Press</span>
         <kbd
           style={{
-            background: 'rgba(18, 26, 21, 0.8)',
-            border: '1px solid rgba(0, 255, 136, 0.25)',
-            color: 'var(--neon-green)',
+            background: 'rgba(255, 255, 255, 0.06)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            color: '#d4d4d8',
             borderRadius: '6px',
             padding: '2px 8px',
             fontSize: '0.75rem',
@@ -1012,7 +1019,7 @@ export default function Home() {
       {isSidebarOpen && (
         <div className="sidebar-drawer">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h2 style={{ margin: 0, color: 'var(--neon-green)', fontSize: '1.2rem', fontWeight: 700 }}>Chat History</h2>
+            <h2 style={{ margin: 0, color: '#ffffff', fontSize: '1.2rem', fontWeight: 600 }}>Chat History</h2>
             <button onClick={() => setIsSidebarOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1038,13 +1045,13 @@ export default function Home() {
                   style={{
                     padding: '12px',
                     borderRadius: '8px',
-                    background: session._id === currentChatId ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255,255,255,0.03)',
-                    border: session._id === currentChatId ? '1px solid var(--neon-green)' : '1px solid transparent',
+                    background: session._id === currentChatId ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255,255,255,0.025)',
+                    border: session._id === currentChatId ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid transparent',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.15s ease',
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0, 255, 136, 0.05)'}
-                  onMouseOut={(e) => e.currentTarget.style.background = session._id === currentChatId ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255,255,255,0.03)'}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = session._id === currentChatId ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255,255,255,0.025)'}
                 >
                   <div style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 500, marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {session.title}
@@ -1063,7 +1070,7 @@ export default function Home() {
       {isHumanizePanelOpen && (
         <div className="humanize-drawer">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ margin: 0, color: 'var(--neon-green)', fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 style={{ margin: 0, color: '#ffffff', fontSize: '1.15rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                 <path d="m15 5 4 4" />
@@ -1078,13 +1085,13 @@ export default function Home() {
             </button>
           </div>
 
-          <div style={{ fontSize: '0.78rem', color: 'rgba(240,253,244,0.45)', marginTop: '8px', lineHeight: 1.4 }}>
+          <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', marginTop: '8px', lineHeight: 1.4 }}>
             AI-generated text rewritten to sound naturally human — varied sentence lengths, conversational tone, and natural imperfections.
           </div>
 
           <div className="humanize-content markdown-content">
             {isHumanizing && !humanizedText && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--neon-green)', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#38bdf8', fontSize: '0.9rem' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
                 </svg>
@@ -1117,7 +1124,7 @@ export default function Home() {
               className="prompt-chip"
               onClick={handleHumanize}
               disabled={isHumanizing || !data}
-              style={{ justifyContent: 'center', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}
+              style={{ justifyContent: 'center', borderColor: 'rgba(255, 255, 255, 0.18)', color: '#ffffff' }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
@@ -1147,9 +1154,9 @@ export default function Home() {
             {isCheckingAi && !aiCheckResult && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', padding: '32px 0' }}>
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
-                  <circle cx="12" cy="12" r="10" stroke="var(--neon-green)" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                  <circle cx="12" cy="12" r="10" stroke="#38bdf8" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
                 </svg>
-                <span style={{ color: 'rgba(240,253,244,0.6)', fontSize: '0.92rem' }}>Analyzing content patterns…</span>
+                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.92rem' }}>Analyzing content patterns…</span>
               </div>
             )}
 
@@ -1209,7 +1216,7 @@ export default function Home() {
                       className="prompt-chip"
                       onClick={handleHumanize}
                       disabled={isHumanizing}
-                      style={{ flex: 1, justifyContent: 'center', borderColor: 'var(--neon-green)', color: 'var(--neon-green)' }}
+                      style={{ flex: 1, justifyContent: 'center', borderColor: 'rgba(255, 255, 255, 0.2)', color: '#ffffff' }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
@@ -1237,7 +1244,7 @@ export default function Home() {
       {isAuthModalOpen && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)',
           zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
           <div className="neon-card auth-modal-card">
@@ -1247,7 +1254,7 @@ export default function Home() {
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
             </button>
-            <h2 style={{ margin: '0 0 24px 0', color: 'var(--neon-green)', textAlign: 'center' }}>
+            <h2 style={{ margin: '0 0 24px 0', color: '#ffffff', textAlign: 'center', fontSize: '1.25rem', fontWeight: 600 }}>
               {authMode === 'login' ? 'System Login' : 'Register Access'}
             </h2>
             <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1285,9 +1292,9 @@ export default function Home() {
             
             <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>
               {authMode === 'login' ? (
-                <>No account? <span style={{ color: 'var(--neon-green)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setAuthMode('signup')}>Register here</span></>
+                <>No account? <span style={{ color: '#ffffff', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setAuthMode('signup')}>Register here</span></>
               ) : (
-                <>Already registered? <span style={{ color: 'var(--neon-green)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setAuthMode('login')}>Login here</span></>
+                <>Already registered? <span style={{ color: '#ffffff', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setAuthMode('login')}>Login here</span></>
               )}
             </div>
           </div>

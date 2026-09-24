@@ -27,6 +27,7 @@ export type ChatSettings = {
   temperature: number;
   maxSteps: number;
   enabledTools: ToolConfig;
+  accentColor?: string;
 };
 
 export const DEFAULT_SYSTEM_PROMPT = `You are ATLAS — the Advanced Toolkit for Learning, Analysis, and Synthesis. You are an authoritative, comprehensive, and rigorous intelligence system engineered to navigate vast amounts of information, conduct real-time research, recommend educational videos, and synthesize complex topics with clarity and depth. You have access to tools for web search, getting the current date/time, checking meteorological data, looking up Wikipedia articles, searching and recommending YouTube videos, and generating downloadable PDF reports.
@@ -43,6 +44,7 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   temperature: 0.7,
   maxSteps: 8,
+  accentColor: '#38bdf8',
   enabledTools: {
     webSearch: true,
     getCurrentDateTime: true,
